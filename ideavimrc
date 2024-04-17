@@ -1,0 +1,15 @@
+" Source your .vimrc
+source ~/.vimrc
+
+"" -- Map IDE actions to IdeaVim -- https://jb.gg/abva4t
+map <leader>d <Action>(GotoDeclaration)
+map <leader>n <Action>(GotoFile)
+map <leader>e <Action>(SearchEverywhere)
+map <leader>r <Action>(RenameElement)
+map <leader>w <Action>(Switcher)
+map <leader>fs <Action>(FileStructurePopup)
+map <leader>cp <Action>(CopyContentRootPath)
+map <leader>rb <Action>(Vcs.RollbackChangedLines)
+
+
+" Find more examples here: https://jb.gg/share-ideavimrc
