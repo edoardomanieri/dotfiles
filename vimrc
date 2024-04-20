@@ -9,6 +9,7 @@ endif
 call plug#begin()
 
 Plug 'machakann/vim-highlightedyank'
+Plug 'tpope/vim-surround'
 
 call plug#end()
 
@@ -38,4 +39,3 @@ let mapleader = "\<Space>"
 map <leader>p "0p
 vnoremap J :m '>+1<CR>gv=gv
 vnoremap K :m '<-2<CR>gv=gv
-

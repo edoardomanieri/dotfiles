@@ -1,7 +1,7 @@
 " Source your .vimrc
 source ~/.vimrc
 
-"" -- Map IDE actions to IdeaVim -- https://jb.gg/abva4t
+" -- Map IDE actions to IdeaVim -- https://jb.gg/abva4t
 map <leader>d <Action>(GotoDeclaration)
 map <leader>n <Action>(GotoFile)
 map <leader>e <Action>(SearchEverywhere)

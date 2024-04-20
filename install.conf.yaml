@@ -18,7 +18,8 @@
 - shell:
   - 
     command: "[ ! -d ~/.ssh ] && cp -r ~/ansible-encrypted-ssh ~/.ssh && ansible-vault decrypt ~/.ssh/id_ed25519 && rm ~/ansible-encrypted-ssh"
+    description: If ~/.ssh does not exist, create it copy the encrypted ssh files and decrypt them. The command will fail if ~/.ssh already exists - please ignore.
+    quiet: true
     stdin: true
     stdout: true
-    sterr: true
-    description: If ~/.ssh does not exist, create it copy the encrypted ssh files and decrypt them
+    sterr: false
