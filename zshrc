@@ -102,3 +102,8 @@ source $ZSH/oh-my-zsh.sh
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+
+export EDITOR=$(which vim)
+export PATH=$PATH:~/scripts
+
+alias ts="tmux-sessionizer"

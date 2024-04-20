@@ -1,6 +1,7 @@
 - defaults:
     link:
       relink: true
+      force: true
 
 - clean: ['~']
 
@@ -8,6 +9,9 @@
     ~/.zshrc: zshrc
     ~/.vimrc: vimrc
     ~/.ideavimrc: ideavimrc
+    ~/.vim: vim
+    ~/.tmux.conf: tmux.conf
+    ~/scripts: scripts
 
 - shell:
     - [git submodule update --init --recursive, Installing submodules]
