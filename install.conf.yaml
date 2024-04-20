@@ -1,5 +1,6 @@
 - defaults:
     link:
+      create: true
       relink: true
       force: true
 
@@ -12,6 +13,12 @@
     ~/.vim: vim
     ~/.tmux.conf: tmux.conf
     ~/scripts: scripts
+    ~/ansible-encrypted-ssh: ssh
 
 - shell:
-    - [git submodule update --init --recursive, Installing submodules]
+  - 
+    command: "[ ! -d ~/.ssh ] && cp -r ~/ansible-encrypted-ssh ~/.ssh && ansible-vault decrypt ~/.ssh/id_ed25519 && rm ~/ansible-encrypted-ssh"
+    stdin: true
+    stdout: true
+    sterr: true
+    description: If ~/.ssh does not exist, create it copy the encrypted ssh files and decrypt them
