@@ -75,6 +75,8 @@ plugins=(git z vi-mode zsh-autosuggestions)
 VI_MODE_RESET_PROMPT_ON_MODE_CHANGE=true
 VI_MODE_SET_CURSOR=true
 
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
