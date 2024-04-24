@@ -10,7 +10,6 @@
     ~/.zshrc: zshrc
     ~/.vimrc: vimrc
     ~/.ideavimrc: ideavimrc
-    ~/.vim: vim
     ~/.tmux.conf: tmux.conf
     ~/scripts: scripts
     ~/ansible-encrypted-ssh: ssh
