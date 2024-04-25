@@ -10,6 +10,6 @@ map <leader>w <Action>(Switcher)
 map <leader>fs <Action>(FileStructurePopup)
 map <leader>cp <Action>(CopyContentRootPath)
 map <leader>rb <Action>(Vcs.RollbackChangedLines)
-
+map <leader>cwb <Action>(Git.CompareWithBranch)
 
 " Find more examples here: https://jb.gg/share-ideavimrc

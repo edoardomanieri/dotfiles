@@ -108,4 +108,13 @@ source $ZSH/oh-my-zsh.sh
 export EDITOR=$(which vim)
 export PATH=$PATH:~/scripts
 
+alias gc='git checkout'
+alias gplo='git pull origin'
 alias ts="tmux-sessionizer"
+
+export PATH=$PATH:~/personal/dotfiles/scripts
+export EDITOR=$(which vim)
+
+# Source a custom work zsh file if it exists
+[ -e "~/.zshwork"] && source ~/.zshwork
+
