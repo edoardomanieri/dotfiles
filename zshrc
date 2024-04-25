@@ -70,7 +70,7 @@ ZSH_THEME="robbyrussell"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git z vi-mode zsh-autosuggestions)
+plugins=(git z vi-mode zsh-autosuggestions zsh-syntax-highlighting) 
 
 VI_MODE_RESET_PROMPT_ON_MODE_CHANGE=true
 VI_MODE_SET_CURSOR=true
@@ -113,5 +113,5 @@ alias gplo='git pull origin'
 alias ts="tmux-sessionizer"
 
 # Source a custom work zsh file if it exists
-[ -e "~/.zshwork" ] && source ~/.zshwork
+[[ -f "~/.zshwork" ]] && source ~/.zshwork
 
