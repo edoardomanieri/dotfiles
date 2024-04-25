@@ -112,8 +112,6 @@ alias gc='git checkout'
 alias gplo='git pull origin'
 alias ts="tmux-sessionizer"
 
-export EDITOR=$(which vim)
-
 # Source a custom work zsh file if it exists
-[ -e "~/.zshwork"] && source ~/.zshwork
+[ -e "~/.zshwork" ] && source ~/.zshwork
 
