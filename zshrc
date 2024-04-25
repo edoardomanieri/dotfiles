@@ -120,3 +120,5 @@ alias cd="z"
 # Set up fzf key bindings and fuzzy completion
 eval "$(fzf --zsh)"
 
+source ~/fzf-git.sh/fzf-git.sh
+
