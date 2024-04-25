@@ -111,7 +111,12 @@ export PATH=$PATH:~/scripts
 alias gc='git checkout'
 alias gplo='git pull origin'
 alias ts="tmux-sessionizer"
+alias cat="bat"
+alias cd="z"
 
 # Source a custom work zsh file if it exists
 [[ -f "~/.zshwork" ]] && source ~/.zshwork
+
+# Set up fzf key bindings and fuzzy completion
+eval "$(fzf --zsh)"
 
