@@ -112,7 +112,6 @@ alias gc='git checkout'
 alias gplo='git pull origin'
 alias ts="tmux-sessionizer"
 
-export PATH=$PATH:~/personal/dotfiles/scripts
 export EDITOR=$(which vim)
 
 # Source a custom work zsh file if it exists
