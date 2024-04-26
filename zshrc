@@ -115,7 +115,7 @@ alias cat="bat"
 alias cd="z"
 
 # Source a custom work zsh file if it exists
-[[ -f "~/.zshwork" ]] && source ~/.zshwork
+[[ -f "$HOME/.zshwork" ]] && source $HOME/.zshwork
 
 # Set up fzf key bindings and fuzzy completion
 eval "$(fzf --zsh)"
