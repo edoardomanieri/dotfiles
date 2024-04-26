@@ -1,21 +1,10 @@
 #!/usr/bin/env bash
 
-common_dirs=(~/)
-work_dirs=(~/personal ~/plentific ~/plentific/workspaces/master)
-personal_dirs=(~/projects)
-dirs=("${common_dirs[@]}" "${work_dirs[@]}" "${personal_dirs[@]}")
-
-existing_dirs=()
-for dir in "${dirs[@]}"; do
-    if [[ -d $dir ]]; then
-        existing_dirs+=($dir)
-    fi
-done
-
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find $(printf '%s ' "${existing_dirs[@]}") -mindepth 1 -maxdepth 1 -type d | fzf)
+    dirs="$(cat $HOME/.tmux-sessionizer-dirs | tr '\n' ' ')"
+    selected=$(eval find ~/ $dirs -mindepth 1 -maxdepth 1 -type d | fzf)
 fi
 
 if [[ -z $selected ]]; then
