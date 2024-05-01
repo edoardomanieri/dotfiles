@@ -37,6 +37,9 @@ set softtabstop=4
 set shiftwidth=4        " number of spaces to use for auto indent
 set autoindent          " copy indent from current line when starting a new line
 
+set ignorecase          " ignore case when searching
+set smartcase           " automatically switch to case sensitive if mixed search
+
 " make backspaces more powerfull
 set backspace=indent,eol,start
 
