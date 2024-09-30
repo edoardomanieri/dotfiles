@@ -13,6 +13,6 @@ map <leader>rb <Action>(Vcs.RollbackChangedLines)
 map <leader>cwb <Action>(Git.CompareWithBranch)
 map <Leader>f <action>(com.mituuz.fuzzier.Fuzzier)
 
+set surrond
+
 " Find more examples here: https://jb.gg/share-ideavimrc
-
-

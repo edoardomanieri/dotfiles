@@ -52,6 +52,7 @@ map Q gq
 let mapleader = "\<Space>"
 
 map <leader>p "0p
+map <leader>rp viw"0p
  
 " Quickly insert an empty new line without entering insert mode
 nnoremap <Leader>o o<Esc>0"_D
