@@ -1,0 +1,52 @@
+ #!/usr/bin/env bash
+
+typeset -g WT_PREVIOUS_BRANCH=""
+typeset -g WT_SHOULD_POP_STASH=false
+
+_wt_stash_if_needed() {
+  local stash_before
+  local stash_after
+  local stash_output
+
+  WT_SHOULD_POP_STASH=false
+  stash_before="$(git rev-parse -q --verify refs/stash 2>/dev/null || true)"
+  stash_output="$(git stash 2>&1)"
+  if [[ $? -ne 0 ]]; then
+    echo "Errore durante git stash:"
+    echo "$stash_output"
+    return 1
+  fi
+
+  stash_after="$(git rev-parse -q --verify refs/stash 2>/dev/null || true)"
+  if [[ "$stash_after" != "$stash_before" ]]; then
+    WT_SHOULD_POP_STASH=true
+  fi
+
+  return 0
+}
+
+wt-up() {
+  WT_PREVIOUS_BRANCH="$(git branch --show-current)"
+  if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
+    echo "Non riesco a determinare il branch corrente."
+    return 1
+  fi
+
+  if ! _wt_stash_if_needed; then
+    echo "wt-up interrotto: non sono riuscito a salvare le modifiche prima del cambio branch."
+    return 1
+  fi
+
+  cd jethr &&
+    git checkout main &&
+    cd - &&
+    wt switch main &&
+    git checkout eman/local-test &&
+    git reset --hard "$WT_PREVIOUS_BRANCH"
+
+  if [[ $? -ne 0 ]]; then
+    return 1
+  fi
+
+  if [[ "$WT_SHOULD_POP_STASH" == true ]]; then
+    if ! git stash pop; then
