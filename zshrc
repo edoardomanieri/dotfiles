@@ -115,8 +115,9 @@ alias cat="bat"
 alias cd="j"
 alias ld="lazydocker"
 
-# Source a custom work zsh file if it exists
-[[ -f "$HOME/.zshwork" ]] && source $HOME/.zshwork
+# Source work helpers if they exist
+[[ -f "$HOME/.zshwork" ]] && source "$HOME/.zshwork"
+[[ -f "$HOME/scripts/wt" ]] && source "$HOME/scripts/wt"
 
 # Set up zoxide
 eval "$(zoxide init zsh --cmd j)"
@@ -126,3 +127,10 @@ eval "$(fzf --zsh)"
 
 source ~/fzf-git.sh/fzf-git.sh
 
+bindkey '^n' forward-word 
+bindkey '^r' fzf-history-widget
+
+# opencode
+export PATH=/Users/eman/.opencode/bin:$PATH
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi

@@ -8,10 +8,12 @@ map <leader>e <Action>(SearchEverywhere)
 map <leader>r <Action>(RenameElement)
 map <leader>w <Action>(Switcher)
 map <leader>fs <Action>(FileStructurePopup)
-map <leader>cp <Action>(CopyContentRootPath)
+map <leader>cp <Action>(CopySourceRootPath)
 map <leader>rb <Action>(Vcs.RollbackChangedLines)
 map <leader>cwb <Action>(Git.CompareWithBranch)
-map <Leader>f <action>(com.mituuz.fuzzier.Fuzzier)
+map <Leader>pf <action>(com.mituuz.fuzzier.Fuzzier)
+map <leader>sd <Action>(Diff.ShowDiff)
+map <leader>lc <Action>(CommentByLineComment)
 
 set surrond
 

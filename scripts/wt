@@ -1,40 +1,96 @@
- #!/usr/bin/env bash
+#!/usr/bin/env bash
 
 typeset -g WT_PREVIOUS_BRANCH=""
-typeset -g WT_SHOULD_POP_STASH=false
+typeset -g WT_TEMP_COMMIT=""
 
-_wt_stash_if_needed() {
-  local stash_before
-  local stash_after
-  local stash_output
+_wt_commit_if_needed() {
+  local commit_output
+  local original_branch
 
-  WT_SHOULD_POP_STASH=false
-  stash_before="$(git rev-parse -q --verify refs/stash 2>/dev/null || true)"
-  stash_output="$(git stash 2>&1)"
-  if [[ $? -ne 0 ]]; then
-    echo "Errore durante git stash:"
-    echo "$stash_output"
+  WT_TEMP_COMMIT=""
+
+  if [[ -z "$(git status --short)" ]]; then
+    return 0
+  fi
+
+  original_branch="$(git branch --show-current)"
+
+  if ! git checkout --detach >/dev/null 2>&1; then
+    echo "Errore durante il checkout detached per il commit temporaneo."
     return 1
   fi
 
-  stash_after="$(git rev-parse -q --verify refs/stash 2>/dev/null || true)"
-  if [[ "$stash_after" != "$stash_before" ]]; then
-    WT_SHOULD_POP_STASH=true
+  if ! git add -A; then
+    echo "Errore durante git add -A."
+    [[ -n "$original_branch" ]] && git checkout "$original_branch" >/dev/null 2>&1
+    return 1
   fi
 
+  commit_output="$(git commit --no-verify -m "wt temporary commit" 2>&1)"
+  if [[ $? -ne 0 ]]; then
+    echo "Errore durante git commit --no-verify:"
+    echo "$commit_output"
+    [[ -n "$original_branch" ]] && git checkout "$original_branch" >/dev/null 2>&1
+    return 1
+  fi
+
+  WT_TEMP_COMMIT="$(git rev-parse HEAD)"
+  return 0
+}
+
+_wt_uncommit_if_needed() {
+  if [[ -z "$WT_TEMP_COMMIT" ]]; then
+    return 0
+  fi
+
+  if ! git reset HEAD~1; then
+    echo "Errore durante l'uncommit del commit temporaneo."
+    return 1
+  fi
+
+  WT_TEMP_COMMIT=""
   return 0
 }
 
 wt-up() {
-  WT_PREVIOUS_BRANCH="$(git branch --show-current)"
-  if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
+  local current_branch
+  local target_ref
+
+  current_branch="$(git branch --show-current)"
+  if [[ -z "$current_branch" ]]; then
     echo "Non riesco a determinare il branch corrente."
     return 1
   fi
 
-  if ! _wt_stash_if_needed; then
-    echo "wt-up interrotto: non sono riuscito a salvare le modifiche prima del cambio branch."
+  if [[ "$current_branch" == "eman/local-test" ]]; then
+    if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
+      echo "wt-up interrotto: sei gia' su eman/local-test ma WT_PREVIOUS_BRANCH e' vuota, quindi non so quale branch ripristinare prima del refresh."
+      return 1
+    fi
+
+    echo "wt-up ha rilevato eman/local-test: eseguo un refresh con wt-down prima di rifare wt-up."
+    if ! wt-down; then
+      echo "wt-up interrotto: wt-down non e' riuscito durante il refresh."
+      return 1
+    fi
+
+    current_branch="$(git branch --show-current)"
+    if [[ -z "$current_branch" || "$current_branch" == "eman/local-test" ]]; then
+      echo "wt-up interrotto: dopo il refresh non sono tornato su un branch sorgente valido."
+      return 1
+    fi
+  fi
+
+  WT_PREVIOUS_BRANCH="$current_branch"
+
+  if ! _wt_commit_if_needed; then
+    echo "wt-up interrotto: non sono riuscito a creare il commit temporaneo prima del cambio branch."
     return 1
+  fi
+
+  target_ref="$WT_PREVIOUS_BRANCH"
+  if [[ -n "$WT_TEMP_COMMIT" ]]; then
+    target_ref="$WT_TEMP_COMMIT"
   fi
 
   cd jethr &&
@@ -42,11 +98,54 @@ wt-up() {
     cd - &&
     wt switch main &&
     git checkout eman/local-test &&
-    git reset --hard "$WT_PREVIOUS_BRANCH"
+    git reset --hard "$target_ref"
 
   if [[ $? -ne 0 ]]; then
     return 1
   fi
 
-  if [[ "$WT_SHOULD_POP_STASH" == true ]]; then
-    if ! git stash pop; then
+  if ! _wt_uncommit_if_needed; then
+    echo "Cambio branch completato, ma l'uncommit del commit temporaneo non e' riuscito."
+    return 1
+  fi
+}
+
+wt-down() {
+  local current_branch
+
+  current_branch="$(git branch --show-current)"
+  if [[ "$current_branch" != "eman/local-test" ]]; then
+    echo "Il branch corrente deve essere eman/local-test."
+    return 1
+  fi
+
+  if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
+    echo "Non ho un branch precedente salvato in WT_PREVIOUS_BRANCH."
+    return 1
+  fi
+
+  if ! _wt_commit_if_needed; then
+    echo "wt-down interrotto: non sono riuscito a creare il commit temporaneo prima del cambio branch."
+    return 1
+  fi
+
+  if ! git checkout main; then
+    return 1
+  fi
+
+  if ! wt switch "$WT_PREVIOUS_BRANCH"; then
+    return 1
+  fi
+
+  if [[ -n "$WT_TEMP_COMMIT" ]]; then
+    if ! git reset --hard "$WT_TEMP_COMMIT"; then
+      echo "Rientro sul branch completato, ma non sono riuscito a ripristinare il commit temporaneo."
+      return 1
+    fi
+
+    if ! _wt_uncommit_if_needed; then
+      echo "Rientro sul branch completato, ma l'uncommit del commit temporaneo non e' riuscito."
+      return 1
+    fi
+  fi
+}
