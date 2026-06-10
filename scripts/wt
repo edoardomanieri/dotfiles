@@ -2,23 +2,24 @@
 
 typeset -g WT_PREVIOUS_BRANCH=""
 typeset -g WT_SOURCE_REF=""
+typeset -ga WT_IGNORED_PATHSPECS=(":(exclude).worktreeinclude")
 
 _wt_repo_dir() {
   if [[ -n "${WT_REPO_DIR:-}" ]]; then
-    echo "$WT_REPO_ DIR"
+    echo "$WT_REPO_DIR"
   else
     echo "/Users/eman/projects/jethr"
   fi
 }
 
 _wt_dirty() {
-  [[ -n "$(git status --short)" ]]
+  [[ -n "$(git status --short -- . "${WT_IGNORED_PATHSPECS[@]}")" ]]
 }
 
 _wt_require_clean() {
   if _wt_dirty; then
     echo "wt interrotto: il working tree deve essere pulito."
-    git status --short
+    git status --short -- . "${WT_IGNORED_PATHSPECS[@]}"
     return 1
   fi
 }
@@ -48,12 +49,12 @@ _wt_prepare_staged_diff() {
 }
 
 _wt_has_output_changes() {
-  ! git diff --quiet "$WT_SOURCE_REF" || [[ -n "$(git ls-files --others --exclude-standard)" ]]
+  ! git diff --quiet "$WT_SOURCE_REF" -- . "${WT_IGNORED_PATHSPECS[@]}" ||
+    [[ -n "$(git ls-files --others --exclude-standard -- . "${WT_IGNORED_PATHSPECS[@]}")" ]]
 }
 
-wt-up() {
+_wt_save_source_context() {
   local current_branch
-  local repo_dir
 
   current_branch="$(git branch --show-current)"
   if [[ -z "$current_branch" ]]; then
@@ -63,7 +64,7 @@ wt-up() {
 
   if [[ "$current_branch" == "eman/local-test" ]]; then
     if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
-      echo "wt-up interrotto: sei gia' su eman/local-test ma WT_PREVIOUS_BRANCH e' vuota."
+      echo "wt interrotto: sei gia' su eman/local-test ma WT_PREVIOUS_BRANCH e' vuota."
       return 1
     fi
 
@@ -75,6 +76,12 @@ wt-up() {
 
   WT_PREVIOUS_BRANCH="$current_branch"
   WT_SOURCE_REF="$(git rev-parse HEAD)"
+}
+
+wt-up() {
+  local repo_dir
+
+  _wt_save_source_context || return 1
 
   repo_dir="$(_wt_repo_dir)"
   cd "$repo_dir" || return 1
@@ -82,6 +89,19 @@ wt-up() {
   wt switch main &&
     git checkout eman/local-test &&
     git reset --hard "$WT_SOURCE_REF"
+}
+
+wt-fe-up() {
+  local repo_dir
+
+  _wt_save_source_context || return 1
+
+  repo_dir="$(_wt_repo_dir)"
+  cd "$repo_dir" || return 1
+
+  wt switch main &&
+    git checkout eman/local-test &&
+    git restore --source "$WT_SOURCE_REF" --staged --worktree -- frontend
 }
 
 wt-down() {
@@ -101,6 +121,10 @@ wt-down() {
   fi
 
   git checkout main && wt switch "$WT_PREVIOUS_BRANCH"
+}
+
+wt-fe-down() {
+  wt-down
 }
 
 wt-run() {
@@ -152,7 +176,7 @@ wt-move() {
   fi
 
   git reset --mixed "$WT_SOURCE_REF" || return 1
-  git stash push -u -m "wt-move $WT_PREVIOUS_BRANCH" || return 1
+  git stash push -u -m "wt-move $WT_PREVIOUS_BRANCH" -- . "${WT_IGNORED_PATHSPECS[@]}" || return 1
   wt-down || return 1
   git stash pop
 }
