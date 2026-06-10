@@ -1,60 +1,59 @@
 #!/usr/bin/env bash
 
 typeset -g WT_PREVIOUS_BRANCH=""
-typeset -g WT_TEMP_COMMIT=""
+typeset -g WT_SOURCE_REF=""
 
-_wt_commit_if_needed() {
-  local commit_output
-  local original_branch
-
-  WT_TEMP_COMMIT=""
-
-  if [[ -z "$(git status --short)" ]]; then
-    return 0
+_wt_repo_dir() {
+  if [[ -n "${WT_REPO_DIR:-}" ]]; then
+    echo "$WT_REPO_ DIR"
+  else
+    echo "/Users/eman/projects/jethr"
   fi
-
-  original_branch="$(git branch --show-current)"
-
-  if ! git checkout --detach >/dev/null 2>&1; then
-    echo "Errore durante il checkout detached per il commit temporaneo."
-    return 1
-  fi
-
-  if ! git add -A; then
-    echo "Errore durante git add -A."
-    [[ -n "$original_branch" ]] && git checkout "$original_branch" >/dev/null 2>&1
-    return 1
-  fi
-
-  commit_output="$(git commit --no-verify -m "wt temporary commit" 2>&1)"
-  if [[ $? -ne 0 ]]; then
-    echo "Errore durante git commit --no-verify:"
-    echo "$commit_output"
-    [[ -n "$original_branch" ]] && git checkout "$original_branch" >/dev/null 2>&1
-    return 1
-  fi
-
-  WT_TEMP_COMMIT="$(git rev-parse HEAD)"
-  return 0
 }
 
-_wt_uncommit_if_needed() {
-  if [[ -z "$WT_TEMP_COMMIT" ]]; then
+_wt_dirty() {
+  [[ -n "$(git status --short)" ]]
+}
+
+_wt_require_clean() {
+  if _wt_dirty; then
+    echo "wt interrotto: il working tree deve essere pulito."
+    git status --short
+    return 1
+  fi
+}
+
+_wt_staged_command() {
+  case "$1" in
+    lint-staged|*-staged) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_wt_merge_base() {
+  git merge-base main "$WT_SOURCE_REF"
+}
+
+_wt_prepare_staged_diff() {
+  local base_ref
+
+  base_ref="$(_wt_merge_base)" || return 1
+  git reset --hard "$base_ref" || return 1
+
+  if git diff --quiet "$base_ref" "$WT_SOURCE_REF"; then
     return 0
   fi
 
-  if ! git reset HEAD~1; then
-    echo "Errore durante l'uncommit del commit temporaneo."
-    return 1
-  fi
+  git diff --binary "$base_ref" "$WT_SOURCE_REF" | git apply --index
+}
 
-  WT_TEMP_COMMIT=""
-  return 0
+_wt_has_output_changes() {
+  ! git diff --quiet "$WT_SOURCE_REF" || [[ -n "$(git ls-files --others --exclude-standard)" ]]
 }
 
 wt-up() {
   local current_branch
-  local target_ref
+  local repo_dir
 
   current_branch="$(git branch --show-current)"
   if [[ -z "$current_branch" ]]; then
@@ -64,57 +63,29 @@ wt-up() {
 
   if [[ "$current_branch" == "eman/local-test" ]]; then
     if [[ -z "$WT_PREVIOUS_BRANCH" ]]; then
-      echo "wt-up interrotto: sei gia' su eman/local-test ma WT_PREVIOUS_BRANCH e' vuota, quindi non so quale branch ripristinare prima del refresh."
+      echo "wt-up interrotto: sei gia' su eman/local-test ma WT_PREVIOUS_BRANCH e' vuota."
       return 1
     fi
 
-    echo "wt-up ha rilevato eman/local-test: eseguo un refresh con wt-down prima di rifare wt-up."
-    if ! wt-down; then
-      echo "wt-up interrotto: wt-down non e' riuscito durante il refresh."
-      return 1
-    fi
-
+    wt-down || return 1
     current_branch="$(git branch --show-current)"
-    if [[ -z "$current_branch" || "$current_branch" == "eman/local-test" ]]; then
-      echo "wt-up interrotto: dopo il refresh non sono tornato su un branch sorgente valido."
-      return 1
-    fi
   fi
+
+  _wt_require_clean || return 1
 
   WT_PREVIOUS_BRANCH="$current_branch"
+  WT_SOURCE_REF="$(git rev-parse HEAD)"
 
-  if ! _wt_commit_if_needed; then
-    echo "wt-up interrotto: non sono riuscito a creare il commit temporaneo prima del cambio branch."
-    return 1
-  fi
+  repo_dir="$(_wt_repo_dir)"
+  cd "$repo_dir" || return 1
 
-  target_ref="$WT_PREVIOUS_BRANCH"
-  if [[ -n "$WT_TEMP_COMMIT" ]]; then
-    target_ref="$WT_TEMP_COMMIT"
-  fi
-
-  cd jethr &&
-    git checkout main &&
-    cd - &&
-    wt switch main &&
+  wt switch main &&
     git checkout eman/local-test &&
-    git reset --hard "$target_ref"
-
-  if [[ $? -ne 0 ]]; then
-    return 1
-  fi
-
-  if ! _wt_uncommit_if_needed; then
-    echo "Cambio branch completato, ma l'uncommit del commit temporaneo non e' riuscito."
-    return 1
-  fi
+    git reset --hard "$WT_SOURCE_REF"
 }
 
 wt-down() {
-  local current_branch
-
-  current_branch="$(git branch --show-current)"
-  if [[ "$current_branch" != "eman/local-test" ]]; then
+  if [[ "$(git branch --show-current)" != "eman/local-test" ]]; then
     echo "Il branch corrente deve essere eman/local-test."
     return 1
   fi
@@ -124,28 +95,64 @@ wt-down() {
     return 1
   fi
 
-  if ! _wt_commit_if_needed; then
-    echo "wt-down interrotto: non sono riuscito a creare il commit temporaneo prima del cambio branch."
+  if ! _wt_require_clean; then
+    echo "wt-down interrotto: usa wt-move per riportare le modifiche sul branch originale, oppure sistemale manualmente."
     return 1
   fi
 
-  if ! git checkout main; then
+  git checkout main && wt switch "$WT_PREVIOUS_BRANCH"
+}
+
+wt-run() {
+  local command_name
+  local command_status
+  local staged=0
+
+  command_name="${1:-}"
+  if [[ -z "$command_name" ]]; then
+    echo "Uso: wt-run <dev-tools-command> [args...]"
     return 1
   fi
 
-  if ! wt switch "$WT_PREVIOUS_BRANCH"; then
+  _wt_staged_command "$command_name" && staged=1
+
+  wt-up || return 1
+  if [[ "$staged" -eq 1 ]]; then
+    _wt_prepare_staged_diff || return 1
+  fi
+
+  ./dev-tools.sh "$@"
+  command_status=$?
+
+  if _wt_has_output_changes; then
+    echo "wt-run ha lasciato modifiche su eman/local-test."
+    echo "Per riportarle sul branch originale esegui: wt-move"
+    return "$command_status"
+  fi
+
+  git reset --hard "$WT_SOURCE_REF" || return 1
+  wt-down || return 1
+  return "$command_status"
+}
+
+wt-move() {
+  if [[ "$(git branch --show-current)" != "eman/local-test" ]]; then
+    echo "Il branch corrente deve essere eman/local-test."
     return 1
   fi
 
-  if [[ -n "$WT_TEMP_COMMIT" ]]; then
-    if ! git reset --hard "$WT_TEMP_COMMIT"; then
-      echo "Rientro sul branch completato, ma non sono riuscito a ripristinare il commit temporaneo."
-      return 1
-    fi
-
-    if ! _wt_uncommit_if_needed; then
-      echo "Rientro sul branch completato, ma l'uncommit del commit temporaneo non e' riuscito."
-      return 1
-    fi
+  if [[ -z "$WT_PREVIOUS_BRANCH" || -z "$WT_SOURCE_REF" ]]; then
+    echo "Manca il contesto di wt-run: WT_PREVIOUS_BRANCH o WT_SOURCE_REF vuota."
+    return 1
   fi
+
+  if ! _wt_has_output_changes; then
+    echo "Non ci sono modifiche da spostare."
+    return 0
+  fi
+
+  git reset --mixed "$WT_SOURCE_REF" || return 1
+  git stash push -u -m "wt-move $WT_PREVIOUS_BRANCH" || return 1
+  wt-down || return 1
+  git stash pop
 }
